@@ -1,7 +1,7 @@
 FROM php:5.6-apache
 MAINTAINER Pierre Cheynier <pierre.cheynier@gmail.com>
 
-ENV PHPIPAM_AGENT_SOURCE https://github.com/phpipam/phpipam-agent
+ENV PHPIPAM_AGENT_SOURCE https://github.com/ElGranLoky/phpipam-agent-1
 
 # Install required deb packages
 RUN sed -i /etc/apt/sources.list -e 's/$/ non-free'/ && \
@@ -25,7 +25,8 @@ COPY entrypoint.sh /
 
 # Clone phpipam-agent sources
 WORKDIR /opt/
-RUN git clone ${PHPIPAM_AGENT_SOURCE}.git
+RUN git clone ${PHPIPAM_AGENT_SOURCE}.git && \
+    mv /opt/phpipam-agent-1 /opt/phpipam-agent
 
 WORKDIR /opt/phpipam-agent
 # Use system environment variables into config.php
