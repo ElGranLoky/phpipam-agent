@@ -1,7 +1,8 @@
-FROM php:5.6-apache
-MAINTAINER Pierre Cheynier <pierre.cheynier@gmail.com>
+FROM php:7-buster
 
-ENV PHPIPAM_AGENT_SOURCE https://github.com/ElGranLoky/phpipam-agent-1
+LABEL MAINTAINER Pierre Cheynier <pierre.cheynier@gmail.com>
+
+ENV PHPIPAM_AGENT_SOURCE https://github.com/phpipam/phpipam-agent
 
 # Install required deb packages
 RUN sed -i /etc/apt/sources.list -e 's/$/ non-free'/ && \
@@ -14,19 +15,19 @@ RUN sed -i /etc/apt/sources.list -e 's/$/ non-free'/ && \
 RUN docker-php-ext-configure mysqli --with-mysqli=mysqlnd && \
     docker-php-ext-install mysqli && \
     docker-php-ext-install json && \
+    docker-php-ext-install gettext && \
     docker-php-ext-install pdo_mysql && \
     ln -s /usr/include/x86_64-linux-gnu/gmp.h /usr/include/gmp.h && \
-    docker-php-ext-configure gmp --with-gmp=/usr/include/x86_64-linux-gnu && \
     docker-php-ext-install gmp && \
     docker-php-ext-install pcntl
 
+#COPY files repository
 COPY php.ini /usr/local/etc/php/
 COPY entrypoint.sh /
 
 # Clone phpipam-agent sources
 WORKDIR /opt/
-RUN git clone ${PHPIPAM_AGENT_SOURCE}.git && \
-    mv /opt/phpipam-agent-1 /opt/phpipam-agent
+RUN git clone ${PHPIPAM_AGENT_SOURCE}.git
 
 WORKDIR /opt/phpipam-agent
 # Use system environment variables into config.php
@@ -39,12 +40,18 @@ RUN cp config.dist.php config.php && \
     -e "s/\['db'\]\['port'\] = 3306;/\['db'\]\['port'\] = 3306;\n\n\$password_file = getenv(\"MYSQL_ENV_MYSQL_PASSWORD_FILE\");\nif(file_exists(\$password_file))\n\$db\['db'\]\['pass'\] = preg_replace(\"\/\\\\s+\/\", \"\", file_get_contents(\$password_file));/" \
     config.php
 
+# Upload scan speed / for 16 networks
+RUN sed -i -e "s/\['threads'\] .*;/\['threads'\] = getenv(\"THREADS\") ?: 32;/" config.php
+
+# Enable remove dhcp devices
+RUN sed -i -e "s/\['reset_autodiscover_addresses'\] = .*;/\['reset_autodiscover_addresses'\] = getenv(\"REMOVE_DHCP\") ?: \"false\";/" \
+    -e "s/\['remove_inactive_dhcp'\] .*;/\['remove_inactive_dhcp'\]         = getenv(\"REMOVE_DHCP\") ?: \"false\";/" \
+    config.php
+
 # Setup crontab
 ENV CRONTAB_FILE=/etc/cron.d/phpipam
-RUN echo "0 * * * * /usr/local/bin/php /opt/phpipam-agent/index.php update > /proc/1/fd/1 2>/proc/1/fd/2" > ${CRONTAB_FILE} && \
-    echo "0 8 * * * /usr/local/bin/php /opt/phpipam-agent/index.php discover > /proc/1/fd/1 2>/proc/1/fd/2" >> ${CRONTAB_FILE} && \
-    echo "15 14 * * * /usr/local/bin/php /opt/phpipam-agent/index.php discover > /proc/1/fd/1 2>/proc/1/fd/2" >> ${CRONTAB_FILE} && \
-    echo "15 12 * * * /usr/local/bin/php /opt/phpipam-agent/index.php discover > /proc/1/fd/1 2>/proc/1/fd/2" >> ${CRONTAB_FILE} && \    
+RUN echo "* * * * * /usr/local/bin/php /opt/phpipam-agent/index.php update > /proc/1/fd/1 2>/proc/1/fd/2" > ${CRONTAB_FILE} && \
+    echo "* * * * * /usr/local/bin/php /opt/phpipam-agent/index.php discover > /proc/1/fd/1 2>/proc/1/fd/2" >> ${CRONTAB_FILE} && \
     chmod 0644 ${CRONTAB_FILE} && \
     crontab ${CRONTAB_FILE}
 

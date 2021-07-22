@@ -24,7 +24,7 @@ This container can be used as a discovery scan agent.
 Pass the MySQL password and the phpipam agent key.
 
 ```bash
-$ docker run -ti -d -e PHPIPAM_AGENT_KEY=dummy-key -e MYSQL_ENV_MYSQL_PASSWORD=my-secret-pw --name ipam-agent --link phpipam-mysql:mysql pierrecdn/phpipam-agent
+$ docker run -ti -d -e PHPIPAM_AGENT_KEY=dummy-key -e MYSQL_ENV_MYSQL_PASSWORD=my-secret-pw --name ipam-agent --link phpipam-mysql:mysql elgranloky/phpipam-agent
 ```
 
 Now, the discovery scans will be performed every 1mn by default.
@@ -40,5 +40,11 @@ You can set `disabled` to disable a schedule.
 
 The format is a crontab definition of the form `*/15 * * * *` :
 ```bash
-$ docker run -ti -d -e PHPIPAM_AGENT_KEY=dummy-key -e MYSQL_ENV_MYSQL_PASSWORD=my-secret-pw -e CRONTAB_UPDATE="*/15 * * * *" -e CRONTAB_DISCOVER="disabled" --name ipam-agent --link phpipam-mysql:mysql pierrecdn/phpipam-agent 
+$ docker run -ti -d -e PHPIPAM_AGENT_KEY=dummy-key -e MYSQL_ENV_MYSQL_PASSWORD=my-secret-pw -e CRONTAB_UPDATE="*/15 * * * *" -e CRONTAB_DISCOVER="disabled" --name ipam-agent --link phpipam-mysql:mysql elgranloky/phpipam-agent 
 ```
+
+### Customize scan & dhcp remove discover
+
+You can use THREADS to setup the concurren threads in scan. Default: 32
+
+You can use REMOVE_DHCP = true, to setup the remove dhcp devices if description es -- autodiscover -- and the device is online. Default: false
